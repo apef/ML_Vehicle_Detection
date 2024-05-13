@@ -2,6 +2,7 @@ import serial
 import time
 import threading
 import multiprocessing
+import re
 
 isconnected = False
 device = None
@@ -24,6 +25,7 @@ class TimerThread(threading.Thread):
         while (time.time() - startTime < self.timeout):
             time.sleep(1)
         #raise TimeoutError("Time's up")
+        print("Timer Thread: Time's up")
         self.exception = TimeoutError("Time has run out, throwing exception to terminate executing code")        
 
 
@@ -43,7 +45,7 @@ def isModuleConnected():
 def sendMSG(message):
     sendStr = "AT+DTRX=" + "{}".format(1) + "{}".format(3) + "{}".format(len(message)) + message + "\r\n"
     
-    response = sendCommand(message, 10)
+    response = sendCommand(sendStr, 10)
     
     if (response.status):
         print("Message successfully sent")
@@ -64,22 +66,25 @@ def timer(waitTime):
         raise timer_thread.exception
 
 def readSerial(response):
+    print("Read serials response:", response.status, response.msg)
     while True:
         
-        if device.in_waiting > 0:
+        #if device.in_waiting > 0:
             #print(time.time() - startTime)
             
-            line = device.readline().decode('utf-8').strip()
-            print("line", line)
-            response.msg = response.msg + line
-            #print(responseStr)
-            if line == "OK":
-                response.status = True
-                #response.status = returnState
-                break
-            if line == "FAIL":
-                response.status = False
-                break
+        line = device.readline().decode('utf-8').strip()
+        print("line", line)
+        response.msg = response.msg + line + "\n"
+        #print(responseStr)
+        if line == "OK":
+            response.status = True
+            #response.status = returnState
+            break
+        if line == "FAIL" or line == "+CME ERROR:1":
+            response.status = False
+            break
+            
+        time.sleep(0.5)
     #return response
 
 def sendCommand(command, waitTime):
@@ -91,12 +96,11 @@ def sendCommand(command, waitTime):
     try:
         startTime = time.time()
     
-        timer_thread = TimerThread(waitTime)
-        timer_thread.start()
+        
 
-      
         #timer(waitTime)
-        print("Sending command")
+        print("Sending command", command)
+        
         device.write(command.encode('utf-8'))
         
         print("Starting to read")
@@ -104,14 +108,17 @@ def sendCommand(command, waitTime):
         serRead_thread = multiprocessing.Process(target=readSerial(response))
         serRead_thread.start()
         
-        timer_thread.join()
-        
-        
+        timer_thread = TimerThread(waitTime)
+        timer_thread.start()
+        #timer_thread.join()
+       
         while (response.status == False):
             if timer_thread.exception:
                 print("Time's up, terminating reading process")
                 serRead_thread.terminate()
                 serRead_thread.join()
+                timer_thread.join()
+                break
             time.sleep(0.5)
         
         print("The response status is: ", response.status)
@@ -176,7 +183,53 @@ def joinNetwork():
     print("Trying to join network")
     
 
-#def setup(device_eui, app_eui, app_key):
+# "AT+CDEVEUI=" + device-eui + "\r\n"
+# "AT+CAPPEUI=" + app_eui + "\r\n"
+# 
+# "AT+CAPPKEY=" + app_key + "\r\n"
+
+def setup(device_eui, app_eui, app_key):
+    currentDevEUI = sendCommand("AT+CDEVEUI?\r\n", 3)
+    
+    old_deveui = currentDevEUI.msg.split("\n")[2].replace("+CDEVEUI:","")
+    
+    if not (old_deveui == device_eui):
+        print("Old deveui does not match, changing..")
+#         if (sendCommand("AT+CDEVEUI={}\r\n".format(device_eui))):
+#             print("Successfully changed Device EUI")
+#         else:
+#             print("Was unable to change Device EUI")
+#         
+    
+    currentAPPEUI = sendCommand("AT+CAPPEUI?\r\n", 3)
+    old_appeui = currentAPPEUI.msg.split("\n")[2].replace("+CDAPPEUI:","")
+    
+    if not (old_appeui == app_eui):
+        print("Old appeui does not match, chaning..")
+#         if (sendCommand("AT+CAPPEUI={}\r\n".format(app_eui), 3)):
+#             print("Successfully changed App Eui")
+#         else:
+#             print("Was unable to change App Eui")
+#         
+    
+    currentAPPKEY = sendCommand("AT+CAPPKEY?\r\n", 3)
+    old_appkey = currentAPPKEY.msg.split("\n")[2].replace("+CDAPPKEY:","")
+    
+    if not (old_appkey == app_key):
+        print("Old appkey does not match, changing--")
+#         if (sendCommand("AT+CAPPKEY={}\r\n".format(app_key), 3)):
+#             print("Successfully changed Appkey")
+#         else:
+#             print("Was unable to change Appkey")
+            
+    sendCommand("AT+CSAVE\r\n", 3)
+    
+    #deveuiSplit = deveuiSplit[2].replace("+CDEVEUI:","")
+    #print(deveuiSplit)
+#     matches = re.match(deveui_regex, currentDevEUI.msg)
+#     oldDevEui = matches.group(0)
+#     print(oldDevEui)
+    
     
 
 def run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key):
@@ -187,13 +240,13 @@ def run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key):
     check = False 
     
     checkT = threading.Thread(target=checkCodeExecutionStatus)
-    checkT.start()
+    #checkT.start()
     
     print("Checking if Module is connected..")
     while not (isconnected):
         isModuleConnected()
-    
-    #setup()
+#     
+    setup(device_eui, app_eui, app_key)
     
     #print("Joining Network..")
     #joinNetwork()
