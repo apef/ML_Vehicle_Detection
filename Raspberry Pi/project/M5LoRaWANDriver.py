@@ -6,6 +6,21 @@ isconnected = False
 device = None
 
 
+
+class TimerThread(threading.Thread):
+    def __init__(self, timeout):
+        super().__init__()
+        self.timeout = timeout
+        self.exception = None
+
+    def run(self):
+        startTime = time.time()
+        while (time.time() - startTime < self.timeout):
+            time.sleep(0.1)
+        self.exception = TimeoutError("Time has run out, throwing exception to terminate executing code")        
+
+
+
 def isModuleConnected():
     global isconnected
     try:
@@ -27,16 +42,30 @@ def sendMSG(message):
     else:
         print("Message was not able to be sent")
 
+
+# def timeDuration(startTime, timeout):
+#     while True:
+#         #print(time.time() - startTime, waitTime)
+#         if (time.time() - startTime > timeout):
+#             print("Time's up")
+#             raise TimeoutError("Timeout reached")
+    
 def timer():
     print("Timer has been started")
     waitTime = 5
     startTime = time.time()
     
-    while True:
-        #print(time.time() - startTime, waitTime)
-        if (time.time() - startTime > waitTime):
-            print("Time's up")
-            raise ValueError('Time has run out, throwing exception to terminate executing code')
+#     timerThread = threading.Thread(target=timeDuration(startTime, waitTime))
+#     timerThread.start()
+#     timerThread.join()
+    timer_thread = TimerThread(waitTime)
+    timer_thread.start()
+# 
+    timer_thread.join()
+    if timer_thread.exception:
+        raise timer_thread.exception
+
+    
 
 def sendCommand(command, waitTime):
     returnState = False
@@ -46,9 +75,8 @@ def sendCommand(command, waitTime):
     #if (time.time() - startTime < waitTime):
     
     try:
-        timerThread = threading.Thread(target=timer)
-        timerThread.start()
-        
+      
+        timer()
         print("Sending command")
         device.write(command.encode('utf-8'))
         
@@ -64,8 +92,8 @@ def sendCommand(command, waitTime):
             if line == "FAIL":
                 returnState = False
                 break
-    except ValueError as err:
-        print(err.args, "Command was not successfully sent")
+    except Exception as err:
+        print("Command was not successfully sent")
     finally:
         return returnState
     return returnState
@@ -132,4 +160,4 @@ device_eui = ""
 app_eui = ""
 app_key = ""
 run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key)
-        
+
