@@ -1,11 +1,17 @@
 import serial
 import time
 import threading
+import multiprocessing
 
 isconnected = False
 device = None
 
 
+class CommandResponse():
+    def __init__(self):
+        self.status = False
+        self.msg = ""
+    
 
 class TimerThread(threading.Thread):
     def __init__(self, timeout):
@@ -16,7 +22,8 @@ class TimerThread(threading.Thread):
     def run(self):
         startTime = time.time()
         while (time.time() - startTime < self.timeout):
-            time.sleep(0.1)
+            time.sleep(1)
+        #raise TimeoutError("Time's up")
         self.exception = TimeoutError("Time has run out, throwing exception to terminate executing code")        
 
 
@@ -24,8 +31,9 @@ class TimerThread(threading.Thread):
 def isModuleConnected():
     global isconnected
     try:
-        connectedStatus = sendCommand("AT+CGMI?\r\n", 3000)
-        if (connectedStatus):
+        connectedStatus = sendCommand("AT+CGMI?\r\n", 3)
+        print(connectedStatus.msg)
+        if (connectedStatus.status):
             print("M5LoRaWAN868 Module is connected")
             isconnected = True
     finally:
@@ -35,68 +43,103 @@ def isModuleConnected():
 def sendMSG(message):
     sendStr = "AT+DTRX=" + "{}".format(1) + "{}".format(3) + "{}".format(len(message)) + message + "\r\n"
     
-    response = sendCommand(message, 5000)
+    response = sendCommand(message, 10)
     
-    if (response):
+    if (response.status):
         print("Message successfully sent")
     else:
         print("Message was not able to be sent")
 
-
-# def timeDuration(startTime, timeout):
-#     while True:
-#         #print(time.time() - startTime, waitTime)
-#         if (time.time() - startTime > timeout):
-#             print("Time's up")
-#             raise TimeoutError("Timeout reached")
     
-def timer():
+def timer(waitTime):
     print("Timer has been started")
-    waitTime = 5
+    #waitTime = 5
     startTime = time.time()
     
-#     timerThread = threading.Thread(target=timeDuration(startTime, waitTime))
-#     timerThread.start()
-#     timerThread.join()
     timer_thread = TimerThread(waitTime)
     timer_thread.start()
-# 
+
     timer_thread.join()
     if timer_thread.exception:
         raise timer_thread.exception
 
-    
+def readSerial(response):
+    while True:
+        
+        if device.in_waiting > 0:
+            #print(time.time() - startTime)
+            
+            line = device.readline().decode('utf-8').strip()
+            print("line", line)
+            response.msg = response.msg + line
+            #print(responseStr)
+            if line == "OK":
+                response.status = True
+                #response.status = returnState
+                break
+            if line == "FAIL":
+                response.status = False
+                break
+    #return response
 
 def sendCommand(command, waitTime):
     returnState = False
-    response = ""
+    response = CommandResponse()
+    responseStr = ""
     startTime = time.time()
     
-    #if (time.time() - startTime < waitTime):
-    
     try:
+        startTime = time.time()
+    
+        timer_thread = TimerThread(waitTime)
+        timer_thread.start()
+
       
-        timer()
+        #timer(waitTime)
         print("Sending command")
         device.write(command.encode('utf-8'))
         
         print("Starting to read")
-        while True:
-            #print(time.time() - startTime)
         
-            line = device.readline().decode('utf-8').strip()
+        serRead_thread = multiprocessing.Process(target=readSerial(response))
+        serRead_thread.start()
+        
+        timer_thread.join()
+        
+        
+        while (response.status == False):
+            if timer_thread.exception:
+                print("Time's up, terminating reading process")
+                serRead_thread.terminate()
+                serRead_thread.join()
+            time.sleep(0.5)
+        
+        print("The response status is: ", response.status)
+        print("The response msg is: ", response.msg)
+#         while True:
+#             if device.in_waiting > 0:
+#             #print(time.time() - startTime)
+#             
+#                 line = device.readline().decode('utf-8').strip()
+#                 print("line", line)
+#                 responseStr = responseStr + line
+#                 print(responseStr)
+#                 if line == "OK":
+#                     returnState = True
+#                 #response.status = returnState
+#                     break
+#                 if line == "FAIL":
+#                     returnState = False
+#                     break
             
-            if line == "OK":
-                returnState = True
-                break
-            if line == "FAIL":
-                returnState = False
-                break
     except Exception as err:
-        print("Command was not successfully sent")
+        print(err.args, "Command was not successfully sent")
     finally:
-        return returnState
-    return returnState
+#         response.status = returnState
+#         response.msg = responseStr
+        #print("This executed")
+        return response
+    #return returnState
         
 
     
@@ -125,6 +168,16 @@ def checkCodeExecutionStatus():
     while True:
         print("Still executing")
         time.sleep(2)
+        
+def joinNetwork():
+    command = "AT+CJOIN=1,0,60,8\r\n"
+    sendCommand(command, 10)
+    
+    print("Trying to join network")
+    
+
+#def setup(device_eui, app_eui, app_key):
+    
 
 def run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key):
     global device
@@ -140,9 +193,11 @@ def run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key):
     while not (isconnected):
         isModuleConnected()
     
+    #setup()
     
-    print("Starting threads..")
-    sendMSG("Test")
+    #print("Joining Network..")
+    #joinNetwork()
+    #sendMSG("Test")
     #readThread = threading.Thread(target=readLoRa)
     #writeThread = threading.Thread(target=writeLoRa)
     
