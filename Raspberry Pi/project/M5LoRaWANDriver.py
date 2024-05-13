@@ -7,31 +7,26 @@ device = None
 
 
 def writeLoRa():
-    print("Writing..")
+    
     while True:
+        print("Writing..")
         device.write("AT+CGMI?\r\n".encode('utf-8'))
-        time.sleep(1000)
+        time.sleep(1)
 
 
 def readLoRa():
     while True:
-        print("Reading..")
-        #device.write("AT+CGMI?\r\n")
+        if device.in_waiting > 0:
+            #print("Reading..")
+            #device.write("AT+CGMI?\r\n")
         
-        msg = device.readline()
-        
-        time.sleep(1000)
+            msg = device.readline().decode('utf-8').strip() 
+            print(msg)
+            #time.sleep(1)
 
 def run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key):
     global device
-    device = serial.Serial(
-        port = port_,
-        baudrate = 115200,
-        parity=serial.PARITY_NONE,
-        stopbits=serial.STOPBITS_ONE,
-        bytesize=serial.EIGHTBITS,
-        timeout=1
-    )
+    device = serial.Serial(port = port_,baudrate = 115200)
 
     response = ""
     check = False 
@@ -43,6 +38,7 @@ def run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key):
 #        response = 
     readThread.start()
     writeThread.start()
+
 
 port_= "/dev/ttyS0"
 tx_pin = ""
