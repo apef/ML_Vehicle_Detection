@@ -14,7 +14,7 @@ model_path = "Models_Webcam_NonCropped_ObjectDetection_V2_model-2348965855255068
 
 def main(width, height, camera_id, model, enable_edgetpu, num_threads):
     
-    image = None
+    #image = None
     
     cap = cv2.VideoCapture(camera_id)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
@@ -34,13 +34,25 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
         if not success:
           sys.exit('ERROR: Unable to open the camera')
           
-    if not image == None:
+       
         
         image = cv2.flip(image, 1)
-    else:
-        print("Could not create cv2 image")
         
+    
+        # The image is normally in Blue-Green_Red, which is different from the Red-Green-Blue
+        # that tensorflow lite models use. Converting to the same color scheme.
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+        tensor_input_img = vision.TensorImage.create_from_array(rgb_image)
+    
         
-    cv2.imshow('object_detector', image)
+        detectionResult = detector.detect(tensor_input_img)
+        image = utils.visualize(image, detectionResult)
+        
+        print(detectionResult)
+        cv2.imshow('object_detector', image)
+        
+    cap.release()
+    cv2.destroyAllWindows()
 
 main(width, heigth, camera_id, model_path, enable_edgetpu, num_threads)
