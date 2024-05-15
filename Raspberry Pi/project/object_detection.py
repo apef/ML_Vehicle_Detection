@@ -48,6 +48,24 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
     
         
         detectionResult = detector.detect(tensor_input_img)
+        
+        for obj in detectionResult.detections:
+            if obj is not None:
+                print(obj.categories[0].category_name)
+                print(obj.bounding_box.origin_x)
+                
+                o_x = obj.bounding_box.origin_x
+                o_y = obj.bounding_box.origin_y
+                
+                box_width = obj.bounding_box.width
+                box_height = obj.bounding_box.height
+                
+                # Trying to find the center of the bounding box
+                center_x = int(o_x + box_width/2)
+                center_y = int(o_y + box_height/2)
+                
+                print(center_x, center_y)
+            
         image = utils.visualize(image, detectionResult)
         
         print(detectionResult)
