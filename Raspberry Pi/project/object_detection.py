@@ -15,6 +15,7 @@ model_path = "Models_Webcam_NonCropped_ObjectDetection_V2_model-2348965855255068
 
 def main(width, height, camera_id, model, enable_edgetpu, num_threads):
     
+    car, bus, bike, truck = 0,0,0,0
     #image = None
     border_x = 300
     border_startY = 640
@@ -58,8 +59,8 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
         
         for obj in detectionResult.detections:
             if obj is not None:
-                print(obj.categories[0].category_name)
-                print(obj.bounding_box.origin_x)
+                #print(obj.categories[0].category_name)
+                #print(obj.bounding_box.origin_x)
                 
                 o_x = obj.bounding_box.origin_x
                 o_y = obj.bounding_box.origin_y
@@ -71,15 +72,41 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
                 center_x = int(o_x + box_width/2)
                 center_y = int(o_y + box_height/2)
                 
-                print(center_x, center_y)
-            
+                #print(center_x, center_y)
+                
+                # Count the detected object if it 'passes' the decision line
+                # However due to the low fps of the video feed, the detected object
+                # may not be on the line at a given frame. Thus making the check rather large
+                # as such it counts an object if it is "close" to the line, not on it.
+                if (center_x+10) > border_x and (center_x-10) < border_x:
+                    classification = obj.categories[0].category_name
+                    if classification == "Car":
+                        car = car + 1
+                    if classification == "Truck":
+                        truck = truck + 1
+                    if classification == "Bus":
+                        bus = bus + 1
+                    if classification == "Bike":
+                        bike = bike + 1
+                        
         image = utils.visualize(image, detectionResult)
         
-        print(detectionResult)
-        if not center_x == None:
-            cv2.circle(image, (center_x,center_y), 3, (0,255,0), 2)
+        # The decision line
         cv2.line(image, (border_x, border_startY), (border_x, border_stopY), border_color, border_thickness)      
-    
+        
+        if not center_x == None:
+            # Center dot in bounding boxes
+            cv2.circle(image, (center_x,center_y), 3, (0,255,0), 2)
+        
+        
+        
+        counts_txt = 'Cars: {}, Trucks: {}, Buses: {}, Bikes: {}'.format(car,truck,bus,bike)    
+        cv2.putText(image, counts_txt, (20,20), cv2.FONT_HERSHEY_PLAIN,
+                1, (0,255,0), 2)
+        
+        #print(detectionResult)
+        
+        
         
         cv2.imshow('object_detector', image)
         
