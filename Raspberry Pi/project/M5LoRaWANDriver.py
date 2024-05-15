@@ -6,7 +6,7 @@ import re
 
 isconnected = False
 device = None
-
+hasJoinedNetwork = False
 
 class CommandResponse():
     def __init__(self):
@@ -43,8 +43,8 @@ def isModuleConnected():
             print("Failed to connect to M5LoRaWAN868 Module")
     
 def sendMSG(message):
-    sendStr = "AT+DTRX=" + "{}".format(1) + "{}".format(3) + "{}".format(len(message)) + message + "\r\n"
-    
+    sendStr = "AT+DTRX=" + "{}".format(1) + "," + "{}".format(8) + "," + "{}".format(len(message)) + "," + message + "\r\n"
+    #sendStr2 = "AT+DTRX=1,8,2,BB\r\n"
     response = sendCommand(sendStr, 10)
     
     if (response.status):
@@ -82,6 +82,10 @@ def readSerial(response):
             break
         if line == "FAIL" or line == "+CME ERROR:1":
             response.status = False
+            break
+        if "ERR+" in line:
+            response.status = False
+            print("ERROR WAS FOUND")
             break
             
         time.sleep(0.5)
@@ -177,10 +181,14 @@ def checkCodeExecutionStatus():
         time.sleep(2)
         
 def joinNetwork():
-    command = "AT+CJOIN=1,0,60,8\r\n"
-    sendCommand(command, 10)
-    
+    global hasJoinedNetwork
     print("Trying to join network")
+    command = "AT+CJOIN=1,0,60,8\r\n"
+    if (sendCommand(command, 60)):
+        print("JOINED NETWORK")
+        hasJoinedNetwork = True
+    
+   
     
 
 # "AT+CDEVEUI=" + device-eui + "\r\n"
@@ -195,10 +203,12 @@ def setup(device_eui, app_eui, app_key):
     
     if not (old_deveui == device_eui):
         print("Old deveui does not match, changing..")
-#         if (sendCommand("AT+CDEVEUI={}\r\n".format(device_eui))):
-#             print("Successfully changed Device EUI")
-#         else:
-#             print("Was unable to change Device EUI")
+        if (sendCommand("AT+CDEVEUI={}\r\n".format(device_eui),3)):
+            print("Successfully changed Device EUI")
+        else:
+            print("Was unable to change Device EUI")
+    else:
+        print("Device EUI was already set")
 #         
     
     currentAPPEUI = sendCommand("AT+CAPPEUI?\r\n", 3)
@@ -206,10 +216,10 @@ def setup(device_eui, app_eui, app_key):
     
     if not (old_appeui == app_eui):
         print("Old appeui does not match, chaning..")
-#         if (sendCommand("AT+CAPPEUI={}\r\n".format(app_eui), 3)):
-#             print("Successfully changed App Eui")
-#         else:
-#             print("Was unable to change App Eui")
+        if (sendCommand("AT+CAPPEUI={}\r\n".format(app_eui), 3)):
+            print("Successfully changed App Eui")
+        else:
+            print("Was unable to change App Eui")
 #         
     
     currentAPPKEY = sendCommand("AT+CAPPKEY?\r\n", 3)
@@ -217,11 +227,13 @@ def setup(device_eui, app_eui, app_key):
     
     if not (old_appkey == app_key):
         print("Old appkey does not match, changing--")
-#         if (sendCommand("AT+CAPPKEY={}\r\n".format(app_key), 3)):
-#             print("Successfully changed Appkey")
-#         else:
-#             print("Was unable to change Appkey")
-            
+        if (sendCommand("AT+CAPPKEY={}\r\n".format(app_key), 3)):
+            print("Successfully changed Appkey")
+        else:
+            print("Was unable to change Appkey")
+    else:
+        print("APP key was already set")
+        
     sendCommand("AT+CSAVE\r\n", 3)
     
     #deveuiSplit = deveuiSplit[2].replace("+CDEVEUI:","")
@@ -248,9 +260,17 @@ def run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key):
 #     
     setup(device_eui, app_eui, app_key)
     
-    #print("Joining Network..")
-    #joinNetwork()
-    #sendMSG("Test")
+    print("Joining Network..")
+    
+    while not (hasJoinedNetwork):
+        print("hasJoinedNetwork should be false", hasJoinedNetwork)
+        joinNetwork()
+        if hasJoinedNetwork:
+            break
+        time.sleep(30)
+    
+    sendMSG("01C")
+    sendMSG("BB")
     #readThread = threading.Thread(target=readLoRa)
     #writeThread = threading.Thread(target=writeLoRa)
     
@@ -258,14 +278,16 @@ def run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key):
 #    try:
 #        response = 
     #readThread.start()
+    
+    print("End has been reached")
     #writeThread.start()
 
 
 port_= "/dev/ttyS0"
 tx_pin = ""
 rx_pin = ""
-device_eui = ""
-app_eui = ""
-app_key = ""
+device_eui = "70B3D57ED0067783"
+app_eui = "0000000000000010"
+app_key = "0CB133ECDA9E4433A8869C515F86FC07"
 run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key)
 
