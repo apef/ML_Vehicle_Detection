@@ -1,4 +1,5 @@
 import cv2
+import sys
 from tflite_support.task import core
 from tflite_support.task import processor
 from tflite_support.task import vision
@@ -51,6 +52,11 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
         
         print(detectionResult)
         cv2.imshow('object_detector', image)
+        
+        # Wait 1ms to check if the user has pressed a key
+        # This will then show the image created above for 1ms each loop
+        # ensuring that the image output is shown in the imshow window
+        cv2.waitKey(1)
         
     cap.release()
     cv2.destroyAllWindows()
