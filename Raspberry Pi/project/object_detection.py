@@ -16,6 +16,13 @@ model_path = "Models_Webcam_NonCropped_ObjectDetection_V2_model-2348965855255068
 def main(width, height, camera_id, model, enable_edgetpu, num_threads):
     
     #image = None
+    border_x = 300
+    border_startY = 640
+    border_stopY = 0
+    border_color = (0,255,0)
+    border_thickness = 3
+    
+    center_x, center_y = None,None
     
     cap = cv2.VideoCapture(camera_id)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
@@ -69,6 +76,11 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
         image = utils.visualize(image, detectionResult)
         
         print(detectionResult)
+        if not center_x == None:
+            cv2.circle(image, (center_x,center_y), 3, (0,255,0), 2)
+        cv2.line(image, (border_x, border_startY), (border_x, border_stopY), border_color, border_thickness)      
+    
+        
         cv2.imshow('object_detector', image)
         
         # Wait 1ms to check if the user has pressed a key
