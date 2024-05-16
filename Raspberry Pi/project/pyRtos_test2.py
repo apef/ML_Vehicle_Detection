@@ -1,21 +1,42 @@
+import pyRTOS
+from Obj_M5LoRaWANDriver import M5LoRaWAN868
+from obj_object_detection import Detector
 import cv2
 import sys
 from tflite_support.task import core
 from tflite_support.task import processor
 from tflite_support.task import vision
 import utils
+#import threading
+
+lora_device = None
+detector = None
+
 
 width = 640
-heigth = 480
+height = 480
 camera_id = 0
 enable_edgetpu = False
 num_threads = 4
 
-model_path = "Models_Webcam_NonCropped_ObjectDetection_V2_model-2348965855255068672_tflite_2024-05-14T07 41 48.523253Z_model.tflite"
+model = "Models_Webcam_NonCropped_ObjectDetection_V2_model-2348965855255068672_tflite_2024-05-14T07 41 48.523253Z_model.tflite"
 car, bus, bike, truck = 0,0,0,0
 
-def main(width, height, camera_id, model, enable_edgetpu, num_threads):
-    global car, bus, bike, truck    
+def classificationAmounts(test):
+    while True:
+        print("Amount of cars: {}, Trucks: {}, Buses: {}, Bikes: {}".format(car,truck,bus,bike))
+        yield [pyRTOS.timeout(120)]
+
+def lora_connection(test):
+    global lora_device
+      
+    while True:
+        print("still here, lora_connection")
+        print("Lora Connection status:", lora_device.hasJoinedNetwork, lora_device.isconnected)
+        yield [pyRTOS.timeout(60)]
+
+def detection(task):
+    global car, bus, bike, truck,width, height, camera_id, model, enable_edgetpu, num_threads    
     
     #image = None
     border_x = 300
@@ -108,18 +129,50 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
         cv2.putText(image, counts_txt, (20,20), cv2.FONT_HERSHEY_PLAIN,
                 1, (0,255,0), 2)
         
+        yield [pyRTOS.timeout(1)]
         #print(detectionResult)
         
         
         
-        cv2.imshow('object_detector', image)
+        #cv2.imshow('object_detector', image)
         
         # Wait 1ms to check if the user has pressed a key
         # This will then show the image created above for 1ms each loop
         # ensuring that the image output is shown in the imshow window
-        cv2.waitKey(1)
+        #cv2.waitKey(1)
         
     cap.release()
     cv2.destroyAllWindows()
+    
 
-main(width, heigth, camera_id, model_path, enable_edgetpu, num_threads)
+def main():
+    global lora_device
+    global detector
+    port= "/dev/ttyS0"
+    device_eui = "70B3D57ED0067783"
+    app_eui = "0000000000000010"
+    app_key = "0CB133ECDA9E4433A8869C515F86FC07"
+    lora_device = M5LoRaWAN868(port, device_eui, app_eui, app_key)
+    lora_device.run()
+    #lora_thread = threading.Thread(target=lora_device.run)
+    #lora_thread.start()
+       
+    while not (lora_device.hasJoinedNetwork):
+        time.sleep(10)
+
+#     model_path = "Models_Webcam_NonCropped_ObjectDetection_V2_model-2348965855255068672_tflite_2024-05-14T07 41 48.523253Z_model.tflite"
+#     detector = Detector(width, height, camera_id, model_path, enable_edgetpu, num_threads)
+#     
+    
+#     detector.run()
+    pyRTOS.add_task(pyRTOS.Task(detection, priority=1, name="color"))
+    pyRTOS.add_task(pyRTOS.Task(classificationAmounts, priority=0, name="touch"))
+    pyRTOS.add_task(pyRTOS.Task(lora_connection, priority=2, name="color"))
+    
+
+    pyRTOS.start()
+
+
+main()
+    
+    
