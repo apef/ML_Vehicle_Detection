@@ -19,7 +19,7 @@ camera_id = 0
 enable_edgetpu = False
 num_threads = 4
 
-model = "Models_Webcam_NonCropped_ObjectDetection_V2_model-2348965855255068672_tflite_2024-05-14T07 41 48.523253Z_model.tflite"
+model = "Webcam_Vehicle_ObjectDetection_V3_model.tflite"
 car, bus, bike, truck = 0,0,0,0
 
 def classificationAmounts(test):
