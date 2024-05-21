@@ -22,9 +22,33 @@ num_threads = 4
 model = "Webcam_Vehicle_ObjectDetection_V3_model.tflite"
 car, bus, bike, truck = 0,0,0,0
 
+def prependIndx(val, indx):
+    val = hex(val)
+    return str(indx) + str(val)
+
+def sendVehicleAmount(amountToSend):
+    if (amountToSend > 0):
+        lora_device.sendMSG(amountToSend)
+
 def classificationAmounts(test):
     while True:
         print("Amount of cars: {}, Trucks: {}, Buses: {}, Bikes: {}".format(car,truck,bus,bike))
+        indexedCars = prependIndx(car, 1)
+        indexedTrucks = prependIndx(truck, 2)
+        indexedBus = prependIndx(bus, 3)
+        indexedBike = prependIndx(bike, 4)
+        
+        if (car > 0 or truck > 0 or bus > 0 or bike > 0):
+            lora_device.sendMSG(indexedCars)
+            sleep(30)
+            lora_device.sendMSG(indexedTrucks)
+            sleep(30)
+            lora_device.sendMSG(indexedBus)
+            sleep(30)
+            lora_device.sendMSG(indexedBike)
+            
+            car, truck, bus, bike = 0,0,0,0
+            
         yield [pyRTOS.timeout(120)]
 
 def lora_connection(test):

@@ -44,8 +44,13 @@ def isModuleConnected():
     
 def sendMSG(message):
     sendStr = "AT+DTRX=" + "{}".format(1) + "," + "{}".format(8) + "," + "{}".format(len(message)) + "," + message + "\r\n"
-    #sendStr2 = "AT+DTRX=1,8,2,BB\r\n"
-    response = sendCommand(sendStr, 10)
+    sendStr2 = "AT+DTRX=1,8,2,BB\r\n"
+    sendStr3 = "AT+DTRX=" + "," + "1" + "," + "8" + "," + str(len(message)) + "," + message + "\r\n"
+    if (sendStr == sendStr2):
+        print(sendStr, "==", sendStr2)
+    else:
+        print(sendStr,"!=", sendStr2)
+    response = sendCommand(sendStr2, 10)
     
     if (response.status):
         print("Message successfully sent")
@@ -269,8 +274,8 @@ def run(port_, tx_pin, rx_pin, device_eui, app_eui, app_key):
             break
         time.sleep(30)
     
-    sendMSG("01C")
-    sendMSG("BB")
+    #sendMSG("01C")
+    #sendMSG("BB")
     #readThread = threading.Thread(target=readLoRa)
     #writeThread = threading.Thread(target=writeLoRa)
     

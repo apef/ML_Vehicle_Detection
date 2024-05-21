@@ -5,10 +5,10 @@ from tflite_support.task import processor
 from tflite_support.task import vision
 import utils
 
-width = 640
-heigth = 480
+width = 960
+heigth = 720
 camera_id = 0
-enable_edgetpu = False
+enable_edgetpu = True
 num_threads = 4
 
 model_path = "Webcam_Vehicle_ObjectDetection_V3_model.tflite"
@@ -18,7 +18,7 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
     global car, bus, bike, truck    
     
     #image = None
-    border_x = 300
+    border_x = 400
     border_startY = 640
     border_stopY = 0
     border_color = (0,255,0)
@@ -42,11 +42,10 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
         
         success, image = cap.read()
         if not success:
-          sys.exit('ERROR: Unable to open the camera')
-          
+          sys.exit('ERROR: Unable to open the camera')          
        
         
-        image = cv2.flip(image, 1)
+        #image = cv2.flip(image, 1)
         
     
         # The image is normally in Blue-Green_Red, which is different from the Red-Green-Blue
@@ -73,8 +72,8 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
                 box_height = obj.bounding_box.height
                 
                 # Trying to find the center of the bounding box
-                center_x = int(o_x + box_width/2)
-                center_y = int(o_y + box_height/2)
+                center_x = int(o_x + box_width  / 2)
+                center_y = int(o_y + box_height / 2)
                 
                 #print(center_x, center_y)
                 
@@ -82,7 +81,17 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
                 # However due to the low fps of the video feed, the detected object
                 # may not be on the line at a given frame. Thus making the check rather large
                 # as such it counts an object if it is "close" to the line, not on it.
-                if (center_x+10) > border_x and (center_x-10) < border_x:
+                if (center_x+20) > border_x and (center_x-20) < border_x:
+                    classification = obj.categories[0].category_name
+                    if classification == "Car":
+                        car = car + 1
+                    if classification == "Truck":
+                        truck = truck + 1
+                    if classification == "Bus":
+                        bus = bus + 1
+                    if classification == "Bike":
+                        bike = bike + 1
+                elif (center_x+20) < border_x and (center_x-20) > border_x:
                     classification = obj.categories[0].category_name
                     if classification == "Car":
                         car = car + 1
@@ -106,7 +115,7 @@ def main(width, height, camera_id, model, enable_edgetpu, num_threads):
         
         counts_txt = 'Cars: {}, Trucks: {}, Buses: {}, Bikes: {}'.format(car,truck,bus,bike)    
         cv2.putText(image, counts_txt, (20,20), cv2.FONT_HERSHEY_PLAIN,
-                1, (0,255,0), 2)
+                2, (0,100,250), 2)
         
         #print(detectionResult)
         
