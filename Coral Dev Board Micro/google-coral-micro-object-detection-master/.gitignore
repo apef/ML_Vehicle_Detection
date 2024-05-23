@@ -1,0 +1,5 @@
+**/coralmicro
+**/build/
+.vscode/
+.FCBak
+venv/
