@@ -6,8 +6,6 @@ import sys
 from tflite_support.task import core
 from tflite_support.task import processor
 from tflite_support.task import vision
-import utils
-#import threading
 
 lora_device = None
 detector = None
@@ -138,27 +136,9 @@ def detection(task):
                         bus = bus + 1
                     if classification == "Bike":
                         bike = bike + 1
-                        
-        image = utils.visualize(image, detectionResult)
-        
-        # The decision line
-        cv2.line(image, (border_x, border_startY), (border_x, border_stopY), border_color, border_thickness)      
-        
-        if not center_x == None:
-            # Center dot in bounding boxes
-            cv2.circle(image, (center_x,center_y), 3, (0,255,0), 2)
-        
-        
-        
-        counts_txt = 'Cars: {}, Trucks: {}, Buses: {}, Bikes: {}'.format(car,truck,bus,bike)    
-        cv2.putText(image, counts_txt, (20,20), cv2.FONT_HERSHEY_PLAIN,
-                1, (0,255,0), 2)
         
         yield [pyRTOS.timeout(1)]
-        
-        
-        
-        #cv2.imshow('object_detector', image)
+
         
         # Wait 1ms to check if the user has pressed a key
         # This will then show the image created above for 1ms each loop
