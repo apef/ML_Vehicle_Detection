@@ -174,6 +174,9 @@ HttpServer::Content UriHandler(const char* uri) {
 
   // Used for calculating FPS
   unsigned long dtime;
+  unsigned long carCount = 0;
+  unsigned long truckCount = 0;
+  unsigned long busCount = 0;
   unsigned long timestamp;
   unsigned long timestamp_prev = xTaskGetTickCount() * 
     (1000 / configTICK_RATE_HZ);
@@ -348,6 +351,16 @@ HttpServer::Content UriHandler(const char* uri) {
             w = (w - locs_zero_point) * locs_scale;
             h = (h - locs_zero_point) * locs_scale;
 
+            // Primitive counting ------------------------
+
+            //float middleX = x_center + (w * 0.5);
+            //float middleY = y_center + (h * 0.5);
+
+//<
+            
+
+            //--------------
+
             // Scale the output boxes from anchor coordinates
             x_center = x_center / metadata::x_scale * anchor[2] + anchor[0];
             y_center = y_center / metadata::y_scale * anchor[3] + anchor[1];
@@ -370,6 +383,34 @@ HttpServer::Content UriHandler(const char* uri) {
             y_min = std::max(std::min(y_min, 1.0f), 0.0f);
             x_max = std::max(std::min(x_max, 1.0f), 0.0f);
             y_max = std::max(std::min(y_max, 1.0f), 0.0f);
+
+
+            //float x_center_clamp = std::max(std::min(x_center, 1.0f), 0.0f);
+
+            //if (dtime > 85) {
+              //printf("Cars: %lu, Trucks: %lu, Buses: %lu\r\n", carCount, truckCount, busCount);
+              //printf("x_center: %f", x_center_clamp);
+            //}
+
+            if (x_min > 0.48 && x_min < 0.5) {
+              printf("Cars: %lu, Trucks: %lu, Buses: %lu\r\n", carCount, truckCount, busCount);
+            
+              if (static_cast<int>(c) == 2) {
+                //printf("Car counted");
+                carCount = carCount + 1;
+              }
+
+              if (static_cast<int>(c) == 3) {
+                //printf("Truck counted");
+                truckCount = truckCount + 1;
+              }
+
+              if (static_cast<int>(c) == 1) {
+                //printf("Bus counted");
+                busCount = busCount + 1;
+              }
+              //vTaskDelay(1000);
+            }
 
             // De-quantize the score
             float score = (scores[(i * num_classes) + c] - scores_zero_point) *
@@ -447,6 +488,8 @@ HttpServer::Content UriHandler(const char* uri) {
         if (i != num_bboxes_output - 1) {
           bbox_string += ", ";
         }
+
+        //if ()
       }
       bbox_string += "]}";
 
@@ -458,13 +501,27 @@ HttpServer::Content UriHandler(const char* uri) {
 
     // Convert global char array
     if (xSemaphoreTake(bbox_mutex, portMAX_DELAY) == pdTRUE) {
+      //std::string vehiclesAmounts =  "{\"Cars\": " + std::to_string(carCount) + "\"Trucks\": " + std::to_string(truckCount) + "\"Buses\": " + std::to_string(busCount);
       std::strcpy(bbox_buf, bbox_string.c_str());
+      //std::strcpy(bbox_buf, vehiclesAmounts.c_str());
       xSemaphoreGive(bbox_mutex);
     }
-
     // Print bounding box JSON string
-    printf("%s\r\n", bbox_buf);
+    //printf("%s\r\n", bbox_buf);
+    //std::strcpy(bbox_buf, vehiclesAmounts.c_str());
+    //printf("%s\r\n", bbox_buf);
+    //if ()
+    //clock_t t;
+    //t = clock();
+    //if (dtime > 85) {
+      //printf("Cars: %lu, Trucks: %lu, Buses: %lu\r\n", carCount, truckCount, busCount);
+      //printf("x_center: %f", x_center_clamp);
+   // }
+    //printf("time: %lu", t);
 
+
+    //printf("Amount of Trucks: %lu", truckCount);
+    //printf("Amount of Buses: %lu", busCount);
     // Sleep to let other tasks run
     // vTaskDelay(pdMS_TO_TICKS(10));
   }
